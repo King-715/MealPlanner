@@ -1,0 +1,38 @@
+{
+	"expo": {
+		"name": "Cuokka",
+		"slug": "Cuokka",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/icon.png",
+		"userInterfaceStyle": "light",
+		"splash": {
+			"image": "./assets/splash.png",
+			"resizeMode": "contain",
+			"backgroundColor": "#ffffff"
+		},
+		"assetBundlePatterns": ["**/*"],
+		"ios": {
+			"supportsTablet": true
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#ffffff"
+			},
+			"permissions": ["INTERNET"],
+			"package": "com.kevinlee715.firstui",
+			"usesCleartextTraffic": true
+		},
+		"web": {
+			"favicon": "./assets/favicon.png"
+		},
+		"extra": {
+			"backendUrl": "http://88.99.2.164:3002/api",
+			"eas": {
+				"projectId": "a4f234f8-c21b-4e8e-a19c-c671ea3caa45"
+			}
+		},
+		"owner": "kevinlee715"
+	}
+}
