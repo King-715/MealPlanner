@@ -35,7 +35,7 @@ export default function WelcomeScreen() {
 			{/* Header with Logo and Text in one line */}
 			<StyledView className="flex-row items-center justify-center mt-8 mx-6">
 				<StyledImage
-					source={require("../../assets/logo.png")}
+					source={require("../../assets/images/logo.png")}
 					className="w-16 h-16 mr-4"
 				/>
 				<StyledText
@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
 			{/* Dish Image - Centered and filling available space */}
 			<StyledView className="flex-1 justify-center">
 				<StyledImage
-					source={require("../../assets/dishes.png")}
+					source={require("../../assets/images/dishes.png")}
 					className="w-full h-full"
 					resizeMode="contain"
 				/>
@@ -76,7 +76,9 @@ export default function WelcomeScreen() {
 			<StyledView className="px-6 pb-8">
 				<StyledTouchable
 					className="bg-[#FF7A6C] py-3"
-					onPress={() => navigation.navigate("Login")}
+					onPress={() =>
+						navigation.navigate("Auth", { screen: "Login" })
+					}
 					activeOpacity={0.8}
 					style={{ borderRadius: 18 }}
 				>

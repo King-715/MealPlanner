@@ -1,8 +1,9 @@
 {
 	"expo": {
-		"name": "Cuokka",
-		"slug": "Cuokka",
+		"name": "cuokka",
+		"slug": "cuokka",
 		"version": "1.0.0",
+		"scheme": "cuokka",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"userInterfaceStyle": "light",
@@ -13,7 +14,15 @@
 		},
 		"assetBundlePatterns": ["**/*"],
 		"ios": {
-			"supportsTablet": true
+			"supportsTablet": true,
+			"bundleIdentifier": "com.yourcompany.cuokka",
+			"infoPlist": {
+				"CFBundleURLTypes": [
+					{
+						"CFBundleURLSchemes": ["cuokka"]
+					}
+				]
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
@@ -21,8 +30,21 @@
 				"backgroundColor": "#ffffff"
 			},
 			"permissions": ["INTERNET"],
-			"package": "com.kevinlee715.firstui",
-			"usesCleartextTraffic": true
+			"package": "com.kevinlee715.cuokka",
+			"intentFilters": [
+				{
+					"action": "VIEW",
+					"data": [
+						{
+							"scheme": "cuokka"
+						}
+					],
+					"category": ["BROWSABLE", "DEFAULT"]
+				}
+			],
+			"usesCleartextTraffic": true,
+			"compileSdkVersion": 33,
+			"targetSdkVersion": 33
 		},
 		"web": {
 			"favicon": "./assets/favicon.png"
@@ -30,7 +52,7 @@
 		"extra": {
 			"backendUrl": "http://88.99.2.164:3002/api",
 			"eas": {
-				"projectId": "a4f234f8-c21b-4e8e-a19c-c671ea3caa45"
+				"projectId": "c29d42ae-529d-49bb-88cb-3a1fa08a5cf2"
 			}
 		},
 		"owner": "kevinlee715"
