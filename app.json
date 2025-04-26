@@ -30,7 +30,7 @@
 				"backgroundColor": "#ffffff"
 			},
 			"permissions": ["INTERNET"],
-			"package": "com.kevinlee715.cuokka",
+			"package": "com.simone.cuokka",
 			"intentFilters": [
 				{
 					"action": "VIEW",

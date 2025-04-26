@@ -20,13 +20,20 @@ import { useNavigation } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { auth, db } from "../../config/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+	signInWithEmailAndPassword,
+	GoogleAuthProvider,
+	signInWithCredential,
+} from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
 const StyledTouchable = styled(TouchableOpacity);
 const StyledImage = styled(Image);
 const StyledTextInput = styled(TextInput);
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
 	const navigation = useNavigation();
@@ -43,48 +50,63 @@ export default function LoginScreen() {
 		WorkSansSemiBold: WorkSans_600SemiBold,
 	});
 
-	// useEffect(() => {
-	// 	GoogleSignin.configure({
-	// 		webClientId:
-	// 			"483652957383-rbtv8qkrd20u380srae82eek8on8rq4t.apps.googleusercontent.com",
-	// 	});
-	// }, []);
+	const [request, response, promptAsync] = Google.useAuthRequest({
+		expoClientId:
+			"483652957383-rbtv8qkrd20u380srae82eek8on8rq4t.apps.googleusercontent.com",
+		androidClientId:
+			"483652957383-sesr70b0qs6p01thljl65vbp4ht7rbhk.apps.googleusercontent.com",
+	});
+	console.log("Request:", request);
+	console.log("Response:", response);
 
 	const signInWithGoogle = async () => {
-		// try {
-		// 	setGoogleLoading(true);
-		// 	// Get the users ID token
-		// 	const { idToken } = await GoogleSignin.signIn();
-		// 	// Create a Google credential with the token
-		// 	const googleCredential =
-		// 		auth.GoogleAuthProvider.credential(idToken);
-		// 	// Sign-in the user with the credential
-		// 	const userCredential = await auth().signInWithCredential(
-		// 		googleCredential
-		// 	);
-		// 	// Check if user exists in Firestore
-		// 	const userDoc = await db()
-		// 		.collection("users")
-		// 		.doc(userCredential.user.uid)
-		// 		.get();
-		// 	if (!userDoc.exists) {
-		// 		// Create new user document if it doesn't exist
-		// 		await db()
-		// 			.collection("users")
-		// 			.doc(userCredential.user.uid)
-		// 			.set({
-		// 				email: userCredential.user.email,
-		// 				name: userCredential.user.displayName,
-		// 				createdAt: new Date().toISOString(),
-		// 			});
-		// 	}
-		// 	navigation.navigate("MainApp");
-		// } catch (error) {
-		// 	console.error("Google Sign In Error:", error);
-		// 	setAuthError(error.message);
-		// } finally {
-		// 	setGoogleLoading(false);
-		// }
+		try {
+			setGoogleLoading(true);
+			setAuthError(null);
+
+			const result = await promptAsync();
+
+			if (result?.type === "success") {
+				const { id_token } = result.params;
+				const credential = GoogleAuthProvider.credential(id_token);
+				const userCredential = await signInWithCredential(
+					auth,
+					credential
+				);
+
+				// Check if user exists in Firestore
+				const userDoc = await getDoc(
+					doc(db, "users", userCredential.user.uid)
+				);
+
+				if (!userDoc.exists()) {
+					// Create new user document if it doesn't exist
+					await setDoc(doc(db, "users", userCredential.user.uid), {
+						email: userCredential.user.email,
+						displayName: userCredential.user.displayName,
+						photoURL: userCredential.user.photoURL,
+						createdAt: new Date().toISOString(),
+						lastLoginAt: new Date().toISOString(),
+					});
+				} else {
+					// Update last login time for existing user
+					await setDoc(
+						doc(db, "users", userCredential.user.uid),
+						{
+							lastLoginAt: new Date().toISOString(),
+						},
+						{ merge: true }
+					);
+				}
+
+				navigation.navigate("MainApp");
+			}
+		} catch (error) {
+			console.error("Google Sign In Error:", error);
+			setAuthError(error.message);
+		} finally {
+			setGoogleLoading(false);
+		}
 	};
 
 	const handleLogin = async () => {
@@ -98,6 +120,7 @@ export default function LoginScreen() {
 				email,
 				password
 			);
+			console.log("User credential:", userCredential);
 			navigation.navigate("MainApp");
 		} catch (error) {
 			console.error("Login Error:", error);
