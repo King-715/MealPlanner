@@ -1,20 +1,19 @@
+import React, { useState, useEffect } from 'react';
 import {
-	View,
-	Text,
-	Image,
-	TouchableOpacity,
-	SafeAreaView,
-	TextInput,
-	Alert,
-} from "react-native";
-import {
-	useFonts,
-	WorkSans_500Medium,
-	WorkSans_700Bold,
-} from "@expo-google-fonts/work-sans";
-import { styled } from "nativewind";
-import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  SafeAreaView,
+  TextInput,
+  Alert,
+  Keyboard,
+} from 'react-native';
+import { useFonts, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
+import { styled } from 'nativewind';
+import { auth, db } from "../../config/firebase";
+import { updatePassword } from 'firebase/auth';
+import { useNavigation } from '@react-navigation/native';
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -23,210 +22,203 @@ const StyledImage = styled(Image);
 const StyledTextInput = styled(TextInput);
 
 export default function PasswordResetScreen() {
-	const navigation = useNavigation();
-	const [newPassword, setNewPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
-	const [passwordError, setPasswordError] = useState("");
-	const [confirmError, setConfirmError] = useState("");
-	const [isValid, setIsValid] = useState(false);
+  const navigation = useNavigation();
+  const [form, setForm] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [errors, setErrors] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isValid, setIsValid] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-	const [fontsLoaded] = useFonts({
-		WorkSansMedium: WorkSans_500Medium,
-		WorkSansBold: WorkSans_700Bold,
-	});
+  const [fontsLoaded] = useFonts({
+    WorkSansMedium: WorkSans_500Medium,
+    WorkSansBold: WorkSans_700Bold,
+  });
 
-	const validatePassword = () => {
-		let isValid = true;
+  // Validate whenever form changes
+  useEffect(() => {
+    const validateForm = () => {
+      const newErrors = {
+        newPassword: '',
+        confirmPassword: '',
+      };
 
-		// Validate new password length
-		if (newPassword.length < 8 && newPassword.length > 0) {
-			setPasswordError("Password must be at least 8 characters");
-			isValid = false;
-		} else {
-			setPasswordError("");
-		}
+      // Validate new password
+      if (form.newPassword.length > 0 && form.newPassword.length < 8) {
+        newErrors.newPassword = 'Password must be at least 8 characters';
+      }
 
-		// Validate password match
-		if (newPassword !== confirmPassword && confirmPassword.length > 0) {
-			setConfirmError("Passwords do not match");
-			isValid = false;
-		} else {
-			setConfirmError("");
-		}
+      // Validate password match (only if both fields have content)
+      if (form.confirmPassword.length > 0 && form.newPassword !== form.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
 
-		setIsValid(
-			newPassword.length >= 8 &&
-				confirmPassword.length >= 8 &&
-				newPassword === confirmPassword
-		);
-	};
+      setErrors(newErrors);
 
-	const handlePasswordChange = (text) => {
-		setNewPassword(text);
-		validatePassword();
-	};
+      // Check if form is completely valid
+      setIsValid(
+        form.newPassword.length >= 8 &&
+        form.confirmPassword.length >= 8 &&
+        form.newPassword === form.confirmPassword
+      );
+    };
 
-	const handleConfirmChange = (text) => {
-		setConfirmPassword(text);
-		validatePassword();
-	};
+    validateForm();
+  }, [form]);
 
-	const handleReset = () => {
-		if (!isValid) {
-			Alert.alert(
-				"Validation Error",
-				"Please make sure passwords match and are at least 8 characters"
-			);
-			return;
-		}
-		// Here you would typically call your API to reset the password
-		Alert.alert("Success", "Password has been reset successfully", [
-			{ text: "OK", onPress: () => navigation.navigate("Login") },
-		]);
-	};
+  const handleChange = (field, value) => {
+    setForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
-	if (!fontsLoaded) {
-		return null;
-	}
+  const handleReset = async () => {
+    Keyboard.dismiss(); // Hide keyboard before showing alert
+    
+    if (!isValid) {
+      Alert.alert(
+        'Validation Error',
+        'Please make sure:\n\n• Password is at least 8 characters\n• Passwords match'
+      );
+      return;
+    }
+	setIsLoading(true);
+    // API call would go here
+    try {
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
 
-	return (
-		<SafeAreaView className="flex-1 bg-white">
-			{/* Header */}
-			<StyledView className="items-center mt-8 mx-6 mb-6">
-				<StyledText
-					style={{
-						fontFamily: "WorkSansBold",
-						fontSize: 36,
-						color: "#FF7A6C",
-					}}
-				>
-					Password
-				</StyledText>
-			</StyledView>
+      await updatePassword(user, form.newPassword);
+      
+      Alert.alert(
+        'Success', 
+        'Password has been reset successfully', 
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
+    } catch (error) {
+      console.error('Password reset error:', error);
+      let errorMessage = 'Failed to reset password. Please try again.';
+      
+      if (error.code === 'auth/requires-recent-login') {
+        errorMessage = 'For security, please log in again before changing your password.';
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-			{/* Password Reset Image */}
-			<StyledView className="flex-1 px-6">
-				<StyledView className="items-center mb-8">
-					<StyledImage
-						source={require("../../../assets/images/reset-password.png")}
-						resizeMode="contain"
-					/>
-				</StyledView>
+  if (!fontsLoaded) {
+    return null;
+  }
 
-				{/* New Password Input */}
-				<StyledView>
-					<StyledText
-						style={{
-							fontFamily: "WorkSansMedium",
-							fontSize: 18,
-							color: "#FF7A6C",
-							marginBottom: 8,
-						}}
-					>
-						Enter your new password:
-					</StyledText>
-					<StyledTextInput
-						className="border border-2 p-3"
-						style={{
-							fontFamily: "WorkSansRegular",
-							fontSize: 16,
-							borderRadius: 18,
-							borderColor: passwordError ? "red" : "#6B7280",
-						}}
-						placeholder="Enter your new password (min 8 chars)"
-						placeholderTextColor="#9CA3AF"
-						secureTextEntry
-						value={newPassword}
-						onChangeText={handlePasswordChange}
-					/>
-					{passwordError && (
-						<StyledText
-							style={{
-								fontFamily: "WorkSansMedium",
-								color: "red",
-								fontSize: 14,
-								marginTop: 4,
-							}}
-						>
-							{passwordError}
-						</StyledText>
-					)}
-				</StyledView>
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      {/* Header */}
+      <StyledView className="items-center mt-8 mx-6 mb-6">
+        <StyledText style={{ fontFamily: 'WorkSansBold', fontSize: 36, color: '#FF7A6C' }}>
+          Password Reset
+        </StyledText>
+      </StyledView>
 
-				{/* Confirm Password Input */}
-				<StyledView className="mt-6 mb-3">
-					<StyledText
-						style={{
-							fontFamily: "WorkSansMedium",
-							fontSize: 18,
-							color: "#FF7A6C",
-							marginBottom: 8,
-						}}
-					>
-						Confirm your password:
-					</StyledText>
-					<StyledTextInput
-						className="border border-2 p-3"
-						style={{
-							fontFamily: "WorkSansRegular",
-							fontSize: 16,
-							borderRadius: 18,
-							borderColor: confirmError ? "red" : "#6B7280",
-						}}
-						placeholder="Confirm your password"
-						placeholderTextColor="#9CA3AF"
-						secureTextEntry
-						value={confirmPassword}
-						onChangeText={handleConfirmChange}
-					/>
-					{confirmError && (
-						<StyledText
-							style={{
-								fontFamily: "WorkSansMedium",
-								color: "red",
-								fontSize: 14,
-								marginTop: 4,
-							}}
-						>
-							{confirmError}
-						</StyledText>
-					)}
-				</StyledView>
+      {/* Password Reset Image */}
+      <StyledView className="items-center mb-8 px-6">
+        <StyledImage
+          source={require('../../../assets/images/reset-password.png')}
+          resizeMode="contain"
+        />
+      </StyledView>
 
-				<StyledText
-					style={{
-						fontFamily: "WorkSansMedium",
-						fontSize: 16,
-						color: "#FF7A6C",
-					}}
-				>
-					Please remember to save your password in a safe place.
-				</StyledText>
-			</StyledView>
+      {/* Form */}
+      <StyledView className="px-6 flex-1">
+        {/* New Password Input */}
+        <StyledView className="mb-4">
+          <StyledText style={{ fontFamily: 'WorkSansMedium', fontSize: 18, color: '#FF7A6C', marginBottom: 8 }}>
+             Enter your new password:
+          </StyledText>
+          <StyledTextInput
+            className="border-2 p-4"
+            style={{
+              fontFamily: "WorkSansMedium",
+              fontSize: 16,
+              borderRadius: 18,
+              borderColor: errors.newPassword ? "red" : "#6B7280",
+            }}
+            placeholder="Minimum 8 characters"
+            placeholderTextColor="#9CA3AF"
+            secureTextEntry
+            value={form.newPassword}
+            onChangeText={(text) => handleChange('newPassword', text)}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {errors.newPassword ? (
+            <StyledText style={{ fontFamily: 'WorkSansMedium', color: 'red', fontSize: 12, marginTop: 4 }}>
+              {errors.newPassword}
+            </StyledText>
+          ) : (
+            <StyledText style={{ fontFamily: 'WorkSansMedium', color: '#6B7280', fontSize: 12, marginTop: 4 }}>
+              {form.newPassword.length > 0 ? `${form.newPassword.length}/8 characters` : ''}
+            </StyledText>
+          )}
+        </StyledView>
 
-			{/* Reset Button */}
-			<StyledView className="px-6 pb-8">
-				<StyledTouchable
-					className={`py-3 flex-row items-center justify-center ${
-						isValid ? "bg-[#ff746a]" : "bg-gray-400"
-					}`}
-					onPress={handleReset}
-					style={{ borderRadius: 18 }}
-					activeOpacity={0.8}
-					disabled={!isValid}
-				>
-					<StyledText
-						style={{
-							fontFamily: "WorkSansMedium",
-							fontSize: 24,
-							color: "white",
-							marginLeft: 12,
-						}}
-					>
-						Reset Password
-					</StyledText>
-				</StyledTouchable>
-			</StyledView>
-		</SafeAreaView>
-	);
+        {/* Confirm Password Input */}
+        <StyledView className="mb-6">
+          <StyledText style={{ fontFamily: 'WorkSansMedium', fontSize: 18, color: '#FF7A6C', marginBottom: 8 }}>
+            Confirm Password
+          </StyledText>
+          <StyledTextInput
+            className="border border-2 p-4"
+            style={{
+              fontFamily: 'WorkSansMedium',
+              fontSize: 16,
+              borderRadius: 18,
+              borderColor: errors.confirmPassword ? 'red' : '#6B7280',
+            }}
+            placeholder="Re-enter your password"
+            placeholderTextColor="#9CA3AF"
+            secureTextEntry
+            value={form.confirmPassword}
+            onChangeText={(text) => handleChange('confirmPassword', text)}
+            autoCapitalize="none"
+            autoCorrect={false}
+            onSubmitEditing={handleReset}
+          />
+          {errors.confirmPassword && (
+            <StyledText style={{ fontFamily: 'WorkSansMedium', color: 'red', fontSize: 12, marginTop: 4 }}>
+              {errors.confirmPassword}
+            </StyledText>
+          )}
+        </StyledView>
+
+        <StyledText style={{ fontFamily: 'WorkSansMedium', fontSize: 14, color: '#6B7280', textAlign: 'center' }}>
+          Your password must be at least 8 characters long.
+        </StyledText>
+      </StyledView>
+
+      {/* Reset Button */}
+      <StyledView className="px-6 pb-8">
+        <StyledTouchable
+          className={`py-4 rounded-xl items-center ${isValid ? 'bg-[#FF7A6C]' : 'bg-gray-300'}`}
+          onPress={handleReset}
+          activeOpacity={0.8}
+          disabled={!isValid}
+        >
+          <StyledText style={{ fontFamily: 'WorkSansBold', fontSize: 18, color: 'white' }}>
+            Reset Password
+          </StyledText>
+        </StyledTouchable>
+      </StyledView>
+    </SafeAreaView>
+  );
 }

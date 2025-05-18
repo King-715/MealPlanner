@@ -15,7 +15,7 @@ import {
 	WorkSans_700Bold,
 	WorkSans_600SemiBold,
 } from "@expo-google-fonts/work-sans";
-import { styled } from "nativewind";
+import { styled } from "nativewind"
 import { useNavigation } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -26,6 +26,7 @@ import {
 	signInWithCredential,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import { makeRedirectUri } from "expo-auth-session";
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -53,11 +54,24 @@ export default function LoginScreen() {
 	const [request, response, promptAsync] = Google.useAuthRequest({
 		expoClientId:
 			"483652957383-rbtv8qkrd20u380srae82eek8on8rq4t.apps.googleusercontent.com",
-		androidClientId:
-			"483652957383-sesr70b0qs6p01thljl65vbp4ht7rbhk.apps.googleusercontent.com",
+		// webClientId:
+		// 	"483652957383-rbtv8qkrd20u380srae82eek8on8rq4t.apps.googleusercontent.com",
+		clientId: "483652957383-sesr70b0qs6p01thljl65vbp4ht7rbhk.apps.googleusercontent.com",
+		androidClientId: "483652957383-sesr70b0qs6p01thljl65vbp4ht7rbhk.apps.googleusercontent.com",
 	});
-	console.log("Request:", request);
-	console.log("Response:", response);
+
+	const [, googleResponse, promptAsyncGoogle] = Google.useIdTokenAuthRequest({
+		selectAccount: true,
+		expoClientId:
+			"483652957383-sesr70b0qs6p01thljl65vbp4ht7rbhk.apps.googleusercontent.com",
+		androidClientId: "483652957383-sesr70b0qs6p01thljl65vbp4ht7rbhk.apps.googleusercontent.com",
+	})
+
+	useEffect(() => {
+		if (googleResponse) {
+			console.log(googleResponse);
+		}
+	}, [googleResponse]);
 
 	const signInWithGoogle = async () => {
 		try {
@@ -296,8 +310,7 @@ export default function LoginScreen() {
 				<StyledTouchable
 					className="bg-[#D4D4D4] py-3 rounded-xl flex-row justify-center items-center"
 					onPress={() => {
-						console.log("Google response pressed:");
-						signInWithGoogle();
+						promptAsyncGoogle();
 					}}
 					disabled={googleLoading}
 				>
